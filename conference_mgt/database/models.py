@@ -20,6 +20,7 @@ class Conferences(Base):
     description = Column(String)
     start_time = Column(DateTime)
     end_time = Column(DateTime)
+    needed_seates = Column(Integer)
     user_username = Column(String)
     conference_room_id = Column(Integer, ForeignKey("conference_rooms.id"))
     conference_room = relationship("ConferenceRooms", back_populates="conference")

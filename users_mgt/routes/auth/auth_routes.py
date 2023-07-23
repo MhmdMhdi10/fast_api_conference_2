@@ -117,13 +117,6 @@ async def get_user_info(authorize: AuthJWT = Depends()):
     """
         ## Returns username
     """
-    #
-    # try:
-    #     authorize.jwt_required()
-    #
-    # except Exception as e:
-    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="you are not logged in")
-
     username = authorize.get_jwt_subject()
 
     response = {

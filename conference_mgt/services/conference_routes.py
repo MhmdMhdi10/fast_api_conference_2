@@ -26,28 +26,8 @@ conference_router = APIRouter(
 session = SessionLocal(bind=engine)
 
 
-def is_conference_room_available(existing_conferences, start_time_var, end_time_var):
-    # Constraint to ensure that the new conference end time is after its start time
-    duration_var = intvar(min=0, max=24*60)  # Assuming the time is represented in minutes from midnight
-    duration_constraint = end_time_var - start_time_var == duration_var
-
-    # Constraint to ensure that the new conference does not overlap with existing conferences
-    overlap_constraints = []
-    for existing_conf in existing_conferences:
-        overlap_constraints.append(end_time_var <= existing_conf['start_time'])
-        overlap_constraints.append(existing_conf['end_time'] <= start_time_var)
-
-    # Combine all constraints
-    constraints = [duration_constraint] + overlap_constraints
-
-    # Create a model using CPMpy
-    model = Model(constraints)
-
-    # Find a feasible solution using CPMpy's solver
-    solution = CPM_ortools(model)
-
-    return solution
-
+def is_conference_room_available(existing_conferences, end_time_var):
+    pass
 
 
 def validate_token(token):
@@ -77,7 +57,7 @@ async def create_conference(conference_room: CreateConferenceRoomModel, token: s
         capacity=conference_room.capacity,
     )
 
-    new_conference_room.user_username = user.json()["username"]
+    new_conference_room.user_username = user
 
     session.add(new_conference_room)
 
@@ -86,6 +66,7 @@ async def create_conference(conference_room: CreateConferenceRoomModel, token: s
     response = {
         "name": new_conference_room.name,
         "capacity": new_conference_room.capacity,
+
     }
 
     return jsonable_encoder(response)
@@ -177,60 +158,46 @@ async def create_conference(conference: CreateConferenceModel, token: str = Depe
     user = requests.get("http://localhost:8000/auth/users/me")
 
     try:
-        conference_room = session.query(ConferenceRooms).filter(ConferenceRooms.id == conference.conference_room_id).first()
+        conference_room = session.query(ConferenceRooms).filter(
+            ConferenceRooms.id == conference.conference_room_id).first()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conference room not found")
 
-    # checks if the conference room is occupied or not
-
     if conference_room.is_active is True:
-        existing_conference = session.query(Conferences).filter(Conferences.conference_room_id == conference.conference_room_id).first()
+        existing_conference = session.query(Conferences).filter(
+            Conferences.conference_room_id == conference.conference_room_id).first()
         if existing_conference.end_time > datetime.datetime.now():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="conference room is occupied")
 
-        # Fetch all existing conferences in the same conference room
-        existing_conferences = session.query(Conferences).filter(
-            Conferences.conference_room_id == conference.conference_room_id).all()
+    new_conference = Conferences(
+        title=conference.title,
+        description=conference.description,
+        start_time=conference.start_time,
+        end_time=conference.end_time,
+    )
 
-        # Convert existing conferences to a list of dictionaries for compatibility with CPMpy
-        existing_conferences_list = [{"start_time": conf.start_time, "end_time": conf.end_time} for conf in
-                                     existing_conferences]
+    new_conference.user_username = user.json()['username']
 
-        # Check if the conference room is available using CPMpy
-        start_time_var = intvar(min=0, max=24 * 60, name="start_time")
-        end_time_var = intvar(min=0, max=24 * 60, name="end_time")
-        solution = is_conference_room_available(existing_conferences_list, start_time_var, end_time_var)
+    print(user.json()["username"])
 
-        # If a solution is found, proceed to add the new conference
-        if solution:
+    new_conference.conference_room = conference_room
 
-            new_conference = Conferences(
-                title=conference.title,
-                description=conference.description,
-                start_time=conference.start_time,
-                end_time=conference.end_time,
-            )
+    conference_room.is_active = True
 
-            new_conference.user_username = user.json()["username"]
+    session.add(conference_room)
+    session.add(new_conference)
 
-            new_conference.conference_room = conference_room
+    session.commit()
 
-            conference_room.is_active = True
+    response = {
+        "title": new_conference.title,
+        "description": new_conference.description,
+        "start_time": new_conference.start_time,
+        "end_time": new_conference.end_time,
+        "conference_room_id": new_conference.conference_room_id,
+    }
 
-            session.add(conference_room)
-            session.add(new_conference)
-
-            session.commit()
-
-            response = {
-                "title": new_conference.title,
-                "description": new_conference.description,
-                "start_time": new_conference.start_time,
-                "end_time": new_conference.end_time,
-                "conference_room_id": new_conference.conference_room_id,
-            }
-
-            return jsonable_encoder(response)
+    return jsonable_encoder(response)
 
 
 @conference_router.get("/conferences", status_code=status.HTTP_200_OK)
