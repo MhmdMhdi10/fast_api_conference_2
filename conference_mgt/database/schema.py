@@ -20,8 +20,6 @@ class ConferenceRoomModel(BaseModel):
 class CreateConferenceRoomModel(BaseModel):
     name: str
     capacity: int
-    is_active: bool = False
-
 
     @classmethod
     @validator('capacity')
@@ -37,6 +35,8 @@ class ConferenceModel(BaseModel):
     description: str
     start_time: datetime = datetime.now()
     end_time: Optional[datetime]
+    needed_seats: int
+    conference_room_id: int
 
     @classmethod
     @validator('start_time', 'end_time', pre=True, always=True)
@@ -51,6 +51,7 @@ class CreateConferenceModel(BaseModel):
     description: str
     start_time: datetime = datetime.now()
     end_time: Optional[datetime]
+    needed_seats: int
     conference_room_id: int
 
     @classmethod

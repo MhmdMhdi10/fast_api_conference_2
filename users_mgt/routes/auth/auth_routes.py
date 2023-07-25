@@ -112,17 +112,17 @@ async def validate(authorize: AuthJWT = Depends()):
     return jsonable_encoder(response)
 
 
-@auth_router.get("/users/me")
+@auth_router.get("/me")
 async def get_user_info(authorize: AuthJWT = Depends()):
     """
         ## Returns username
     """
-    #
-    # try:
-    #     authorize.jwt_required()
-    #
-    # except Exception as e:
-    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="you are not logged in")
+
+    try:
+        authorize.jwt_required()
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="you are not logged in")
 
     username = authorize.get_jwt_subject()
 

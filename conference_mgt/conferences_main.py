@@ -9,6 +9,6 @@ from services.conference_routes import conference_router
 
 Base.metadata.create_all(bind=engine)
 
-conference_app = FastAPI()
+conferences_app = FastAPI()
 
-conference_app.include_router(conference_router)
+conferences_app.include_router(conference_router)

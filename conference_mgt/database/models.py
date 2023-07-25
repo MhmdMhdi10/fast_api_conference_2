@@ -7,7 +7,7 @@ from database.database import Base
 class ConferenceRooms(Base):
     __tablename__ = "conference_rooms"
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, unique=True)
     capacity = Column(Integer)
     is_active = Column(Boolean)
     conference = relationship("Conferences", back_populates="conference_room")
@@ -21,6 +21,7 @@ class Conferences(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
     user_username = Column(String)
+    needed_seats = Column(Integer)
     conference_room_id = Column(Integer, ForeignKey("conference_rooms.id"))
     conference_room = relationship("ConferenceRooms", back_populates="conference")
 
