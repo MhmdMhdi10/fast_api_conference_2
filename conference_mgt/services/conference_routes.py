@@ -37,8 +37,11 @@ def minutes_to_datetime(minutes):
 
 def create_constraints(existing_meetings, new_meeting_start, new_meeting_end):
     # Convert datetime values to minutes from midnight
-    existing_start_times = [datetime_to_minutes(meeting.start_time) for meeting in existing_meetings]
-    existing_end_times = [datetime_to_minutes(meeting.end_time) for meeting in existing_meetings]
+    existing_times = [[datetime_to_minutes(meeting.start_time), datetime_to_minutes(meeting.end_time)] for meeting in existing_meetings]
+
+    existing_meetings = [meeting for meeting in existing_meetings]
+
+
     new_start_time = datetime_to_minutes(new_meeting_start)
     new_end_time = datetime_to_minutes(new_meeting_end)
 
@@ -51,22 +54,35 @@ def create_constraints(existing_meetings, new_meeting_start, new_meeting_end):
     # Constraints
     constraints = []
 
+    solutions = []
+
     # Constraints to handle meetings that go over midnight
+    if new_end_time > new_start_time:
+        for existing_time in existing_times:
+            if existing_time[0] > existing_time[1]:
+                constraints.append(existing_time[1] <= new_start_time & existing_time[0] >= new_end_time)
+            else:
+                constraints.append(existing_time[1] <= new_start_time | existing_time[0] >= new_end_time)
 
-    for existing_end_time in existing_end_times:
-        constraints.append(existing_end_time <= new_start_time)
+            cp_model = cp.Model(constraints)
+            solution = cp_model.solve()
+            solutions.append(solution)
 
-    cp_model = cp.Model(constraints)
+    if new_end_time < new_start_time:
+        for existing_time in existing_times:
+            constraints.append(existing_time[1] <= new_start_time & existing_time[0] >= new_end_time)
 
-    solution = cp_model.solve()
+        cp_model = cp.Model(constraints)
+        solution = cp_model.solve()
+        solutions.append(solution)
 
-    print(new_start_var.value())
+
 
     # If a solution is found, the new meeting can be scheduled without overlapping
 
-    print(solution, "solution")
+    print(solutions, "solution")
 
-    return solution
+    return solutions
 
 
 def validate_token(token):
@@ -228,14 +244,14 @@ async def create_conference(conference: CreateConferenceModel, token: dict = Dep
         new_meeting_end = conference.end_time
 
         # solves overlapping problem
-        solution = create_constraints(existing_meetings, new_meeting_start, new_meeting_end)
+        solutions = create_constraints(existing_meetings, new_meeting_start, new_meeting_end)
 
-        print(solution)
+        print(solutions)
 
     else:
-        solution = True
+        solutions = [True]
 
-    if solution:
+    if False not in solutions:
 
         new_conference = Conferences(
             title=conference.title,
