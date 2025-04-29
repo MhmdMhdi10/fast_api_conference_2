@@ -1,2 +1,3 @@
 # fast_api_conference_2
-FastApi microservice application to reserve meetings in the conference room
+FastApi microservice application to reserve meetings in the conference room with google-or-tools
+
